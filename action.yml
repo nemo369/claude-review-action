@@ -281,3 +281,32 @@ runs:
         PR_NUMBER: ${{ steps.resolve-pr.outputs.pr_number }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         CLAUDE_OUTCOME: ${{ steps.claude-review.outcome }}
+
+    - name: Post review failure check
+      if: always() && inputs.post-check-run == 'true' && (steps.capture-context.outputs.skipped == 'true' || steps.claude-review.outcome == 'failure')
+      shell: bash
+      run: |
+        if [ "${{ steps.capture-context.outputs.skipped }}" = "true" ]; then
+          bash ${{ github.action_path }}/scripts/post-review-failure-check.sh too-large
+        else
+          bash ${{ github.action_path }}/scripts/post-review-failure-check.sh action-error
+        fi
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO: ${{ github.repository }}
+        HEAD_SHA: ${{ steps.resolve-pr.outputs.pr_sha }}
+        CHECK_NAME: ${{ inputs.check-run-name }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    - name: Post check run
+      if: always() && inputs.post-check-run == 'true' && steps.capture-context.outputs.skipped != 'true' && steps.claude-review.outcome == 'success'
+      shell: bash
+      run: bash ${{ github.action_path }}/scripts/post-check-run.sh
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ steps.resolve-pr.outputs.pr_number }}
+        HEAD_SHA: ${{ steps.resolve-pr.outputs.pr_sha }}
+        BLOCKING: ${{ inputs.blocking }}
+        CHECK_NAME: ${{ inputs.check-run-name }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
