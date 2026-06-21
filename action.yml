@@ -112,6 +112,20 @@ inputs:
     required: false
     default: 'true'
 
+  # Check Run output (opt-in)
+  post-check-run:
+    description: 'Also post the review verdict as a GitHub Check Run (in addition to the PR review). Requires checks:write in the consumer workflow permissions.'
+    required: false
+    default: 'false'
+  blocking:
+    description: 'Check Run only. false = neutral conclusion (advisory). true = failure conclusion when changes are requested. NOTE: never gates merge unless the consumer marks the check required in branch protection.'
+    required: false
+    default: 'false'
+  check-run-name:
+    description: 'Name of the posted Check Run (also the name to select in branch-protection required checks).'
+    required: false
+    default: 'Claude Code Review'
+
 runs:
   using: 'composite'
   steps:
