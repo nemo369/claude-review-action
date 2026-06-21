@@ -283,10 +283,10 @@ runs:
         CLAUDE_OUTCOME: ${{ steps.claude-review.outcome }}
 
     - name: Post review failure check
-      if: always() && inputs.post-check-run == 'true' && (steps.capture-context.outputs.skipped == 'true' || steps.claude-review.outcome == 'failure')
+      if: always() && inputs.post-check-run == 'true' && (steps.capture-context.outputs.skipped == 'true' || steps.claude-review.outcome == 'failure' || steps.claude-review.outcome == 'cancelled')
       shell: bash
       run: |
-        if [ "${{ steps.capture-context.outputs.skipped }}" = "true" ]; then
+        if [ "$SKIPPED" = "true" ]; then
           bash ${{ github.action_path }}/scripts/post-review-failure-check.sh too-large
         else
           bash ${{ github.action_path }}/scripts/post-review-failure-check.sh action-error
@@ -297,6 +297,7 @@ runs:
         HEAD_SHA: ${{ steps.resolve-pr.outputs.pr_sha }}
         CHECK_NAME: ${{ inputs.check-run-name }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        SKIPPED: ${{ steps.capture-context.outputs.skipped }}
 
     - name: Post check run
       if: always() && inputs.post-check-run == 'true' && steps.capture-context.outputs.skipped != 'true' && steps.claude-review.outcome == 'success'
