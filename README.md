@@ -227,6 +227,40 @@ Only `anthropic-api-key` is required. Everything else has sensible defaults.
 
 ---
 
+## Check Run output (opt-in)
+
+Set `post-check-run: true` to also publish the review verdict as a GitHub **Check Run**
+(in addition to the normal PR review). The check shows in the PR's "Checks" section and
+mirrors the review for the current commit.
+
+| Input | Default | Meaning |
+|-------|---------|---------|
+| `post-check-run` | `false` | Enable the Check Run output. |
+| `blocking` | `false` | `false` → neutral conclusion (advisory). `true` → `failure` conclusion when changes are requested. |
+| `check-run-name` | `Claude Code Review` | Check name (and the name to select in branch-protection required checks). |
+
+**A Check Run never blocks merge by itself.** It only gates a merge if you explicitly add
+its name to **required status checks** in branch-protection settings. `blocking` only sets
+the check's conclusion value (red vs grey); it does not configure branch protection.
+
+**Required permission:** the consumer workflow must grant `checks: write`:
+
+````yaml
+permissions:
+  checks: write   # required when post-check-run: true
+````
+
+A missing scope yields a 403 that is logged as a warning (the job does not fail).
+
+**Making the check required — read first.** If you mark this check required in branch
+protection, you must also harden against a never-resolving `pending` check: the action's
+job has a finite timeout, and a timed-out/killed job will not post a terminal conclusion,
+wedging the merge box. Do NOT mark this check required without first adding start-of-job
+`in_progress` + always-terminal posting (not implemented by default — opt-in advisory mode
+is the supported path).
+
+---
+
 ## Features
 
 - **3 trigger types** — Label, `@claude` in PR comments, `@claude` in inline review comments
