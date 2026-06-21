@@ -11,8 +11,10 @@ set -euo pipefail
 # --- Find the review for THIS commit (SHA-anchored, login + Verdict filtered) ---
 read_review_field() {
   # $1 = jq field to extract (.state / .body)
+  # HEAD_SHA is passed as a jq --arg (never interpolated into the program text).
   gh api "repos/${REPO}/pulls/${PR_NUMBER}/reviews" \
-    --jq "[.[] | select(.user.login == \"claude[bot]\" and (.body | test(\"Verdict\")) and .commit_id == \"${HEAD_SHA}\")] | last | $1 // empty"
+    | jq -r --arg sha "${HEAD_SHA}" \
+        "[.[] | select(.user.login == \"claude[bot]\" and (.body | test(\"Verdict\")) and .commit_id == \$sha)] | last | $1 // empty"
 }
 
 # --- Bounded retry for cross-token replication lag (review posted under app token) ---
