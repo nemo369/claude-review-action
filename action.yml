@@ -112,6 +112,20 @@ inputs:
     required: false
     default: 'true'
 
+  # Check Run output (opt-in)
+  post-check-run:
+    description: 'Also post the review verdict as a GitHub Check Run (in addition to the PR review). Requires checks:write in the consumer workflow permissions.'
+    required: false
+    default: 'false'
+  blocking:
+    description: 'Check Run only. false = neutral conclusion (advisory). true = failure conclusion when changes are requested. NOTE: never gates merge unless the consumer marks the check required in branch protection.'
+    required: false
+    default: 'false'
+  check-run-name:
+    description: 'Name of the posted Check Run (also the name to select in branch-protection required checks).'
+    required: false
+    default: 'Claude Code Review'
+
 runs:
   using: 'composite'
   steps:
@@ -267,3 +281,33 @@ runs:
         PR_NUMBER: ${{ steps.resolve-pr.outputs.pr_number }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         CLAUDE_OUTCOME: ${{ steps.claude-review.outcome }}
+
+    - name: Post review failure check
+      if: always() && inputs.post-check-run == 'true' && (steps.capture-context.outputs.skipped == 'true' || steps.claude-review.outcome == 'failure' || steps.claude-review.outcome == 'cancelled')
+      shell: bash
+      run: |
+        if [ "$SKIPPED" = "true" ]; then
+          bash ${{ github.action_path }}/scripts/post-review-failure-check.sh too-large
+        else
+          bash ${{ github.action_path }}/scripts/post-review-failure-check.sh action-error
+        fi
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO: ${{ github.repository }}
+        HEAD_SHA: ${{ steps.resolve-pr.outputs.pr_sha }}
+        CHECK_NAME: ${{ inputs.check-run-name }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        SKIPPED: ${{ steps.capture-context.outputs.skipped }}
+
+    - name: Post check run
+      if: always() && inputs.post-check-run == 'true' && steps.capture-context.outputs.skipped != 'true' && steps.claude-review.outcome == 'success'
+      shell: bash
+      run: bash ${{ github.action_path }}/scripts/post-check-run.sh
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ steps.resolve-pr.outputs.pr_number }}
+        HEAD_SHA: ${{ steps.resolve-pr.outputs.pr_sha }}
+        BLOCKING: ${{ inputs.blocking }}
+        CHECK_NAME: ${{ inputs.check-run-name }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
