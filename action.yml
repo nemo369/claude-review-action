@@ -61,6 +61,10 @@ inputs:
     description: 'Claude model to use'
     required: false
     default: 'claude-sonnet-4-6'
+  effort:
+    description: 'Thinking/effort level: low, medium, high, xhigh, max. Empty = model default.'
+    required: false
+    default: ''
   allowed-tools:
     description: 'Tools Claude can use during review'
     required: false
@@ -257,6 +261,7 @@ runs:
         claude_args: |
           --max-turns ${{ steps.adjust-turns.outputs.adjusted_max_turns || inputs.max-turns }}
           --model ${{ inputs.model }}
+          ${{ inputs.effort && format('--effort {0}', inputs.effort) || '' }}
           --allowedTools "${{ inputs.allowed-tools }}"
 
     - name: Post failure comment
