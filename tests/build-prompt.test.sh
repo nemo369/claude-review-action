@@ -38,13 +38,15 @@ grep -qF 'what does $(whoami) do?' /tmp/claude-prompt.md || fail "comment: not i
 
 printf 'diff --git a/x b/x\n+one\n' > /tmp/pr-diff.txt
 echo desc > /tmp/pr-description.txt
-EVENT_TYPE=pull_request
-INCLUDE_ARCHITECTURE_REVIEW=false
-run 120000 || fail "arch off: exit"
+EVENT_TYPE=pull_request INCLUDE_ARCHITECTURE_REVIEW=false EXTRA_PROMPT= run 120000 || fail "arch off: exit"
 grep -q 'ARCHITECTURE PASS (advisory' /tmp/claude-prompt.md && fail "arch off: pass leaked into prompt"
-INCLUDE_ARCHITECTURE_REVIEW=true
-run 120000 || fail "arch on: exit"
-grep -q 'ARCHITECTURE PASS (advisory' /tmp/claude-prompt.md || fail "arch on: pass missing"
-grep -q 'do not count toward REQUEST_CHANGES' /tmp/claude-prompt.md || fail "arch on: event override missing"
-grep -q 'SUBMITTING THE REVIEW' /tmp/claude-prompt.md || fail "arch on: submit rules missing"
+EVENT_TYPE=pull_request INCLUDE_ARCHITECTURE_REVIEW=true EXTRA_PROMPT='EXTRA_PROMPT_SENTINEL' run 120000 || fail "arch on: exit"
+grep -q 'not when answering a direct question' /tmp/claude-prompt.md || fail "arch on: question skip missing"
+grep -q 'Choose the event exactly as SUBMITTING THE REVIEW above says' /tmp/claude-prompt.md || fail "arch on: event override missing"
+grep -q 'Choose REQUEST_CHANGES / APPROVE / COMMENT from the severity sections only' /tmp/claude-prompt.md && fail "arch on: override restates the event rules"
+ARCH_LINE=$(grep -n 'ARCHITECTURE PASS (advisory' /tmp/claude-prompt.md | head -1 | cut -d: -f1)
+SUBMIT_LINE=$(grep -n 'SUBMITTING THE REVIEW' /tmp/claude-prompt.md | head -1 | cut -d: -f1)
+EXTRA_LINE=$(grep -n 'EXTRA_PROMPT_SENTINEL' /tmp/claude-prompt.md | head -1 | cut -d: -f1)
+[ -n "$ARCH_LINE" ] && [ -n "$SUBMIT_LINE" ] && [ "$ARCH_LINE" -gt "$SUBMIT_LINE" ] || fail "arch on: pass must follow SUBMITTING THE REVIEW"
+[ -n "$EXTRA_LINE" ] && [ "$EXTRA_LINE" -gt "$ARCH_LINE" ] || fail "arch on: extra-prompt must stay last"
 echo PASS

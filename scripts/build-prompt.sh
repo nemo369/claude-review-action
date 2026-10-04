@@ -212,16 +212,17 @@ AUTH_FULL_NORMAL
     ;;
 esac
 
-# --- Section 11: Extra prompt (if provided) ---
-if [ -n "$EXTRA_PROMPT" ]; then
-  echo "" >> "$PROMPT_FILE"
-  echo "$EXTRA_PROMPT" >> "$PROMPT_FILE"
-fi
-
-# --- Section 12: Advisory architecture pass (opt-in; never changes the review event) ---
+# --- Section 11: Advisory architecture pass (opt-in; never changes the review event) ---
+# Before extra-prompt so that input stays the last word in the prompt.
 if [ "${INCLUDE_ARCHITECTURE_REVIEW:-}" = "true" ]; then
   echo "" >> "$PROMPT_FILE"
   cat "${ACTION_PATH}/templates/architecture-review.md" >> "$PROMPT_FILE"
+fi
+
+# --- Section 12: Extra prompt (if provided) ---
+if [ -n "$EXTRA_PROMPT" ]; then
+  echo "" >> "$PROMPT_FILE"
+  echo "$EXTRA_PROMPT" >> "$PROMPT_FILE"
 fi
 
 # --- Resolve the diff placeholder ---

@@ -1,6 +1,6 @@
 ## ARCHITECTURE PASS (advisory — does not block)
 
-After the correctness review, do one short pass on the same diff. This pass recommends. It never blocks the PR.
+Only when performing a full code review (not when answering a direct question): after the correctness review, do one short pass on the same diff. This pass recommends. It never blocks the PR.
 
 Place this section after ✅ What's Done Well and before the Verdict line:
 
@@ -8,12 +8,8 @@ Place this section after ✅ What's Done Well and before the Verdict line:
 
 Skip the section entirely when there is nothing structural to say. Do not write "nothing to fix" as a finding. A review that always finds something is noise.
 
-This amends the format line above. Order:
-🔴 BLOCKERS → 🟠 HIGH → 🟡 MEDIUM → 🔵 LOW/NITS → ✅ What's Done Well → 🏗️ Architecture → Verdict
-
 These recommendations are not 🔴 BLOCKERS, 🟠 HIGH, 🟡 MEDIUM, or 🔵 LOW.
 - Do not copy one into a severity section.
-- Do not reconcile them. If a previous review has this section, ignore those notes in Previous Findings.
 - Do not let them change the Verdict. A PR whose only notes are here is still `Clean — no issues.`
 - Do not let them change the review event. They do not count toward REQUEST_CHANGES, and they must not withhold an APPROVE the severity rules already allow.
 
@@ -50,5 +46,4 @@ Optional, one line each, only when non-empty:
 - Worth doing separately — real, but bigger than this change
 
 EVENT OVERRIDE:
-Choose REQUEST_CHANGES / APPROVE / COMMENT from the severity sections only.
-Ignore ## 🏗️ Architecture when choosing the event.
+Choose the event exactly as SUBMITTING THE REVIEW above says. Ignore ## 🏗️ Architecture when applying it.
