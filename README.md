@@ -173,6 +173,7 @@ Only `anthropic-api-key` is required. Everything else has sensible defaults.
 | `critical-rules` | `""` | Multiline string injected as BLOCKER-level rules |
 | `review-guide-path` | `""` | Path to repo's review guide markdown |
 | `extra-prompt` | `""` | Custom instructions appended to end of prompt |
+| `include-architecture-review` | `false` | Advisory `## 🏗️ Architecture` section. Never changes the Verdict or the review event |
 | `include-pr-description` | `true` | Feed PR title+body into review prompt |
 
 ### Limits
@@ -208,6 +209,14 @@ Only `anthropic-api-key` is required. Everything else has sensible defaults.
 | `comment-only` | No | No | Advisory only — never blocks PRs |
 | `request-changes` | Yes | No | Blocks on blockers/high. **Default.** |
 | `full` | Yes | Yes (guarded) | Can also APPROVE clean PRs, gated by threshold + file count |
+
+### Architecture recommendations (opt-in)
+
+```yaml
+include-architecture-review: 'true'
+```
+
+Adds one section, `## 🏗️ Architecture`, after What's Done Well and before the Verdict. It recommends structural changes in the diff (reuse, extensibility, two passes that can undo each other) and caps them at 3. It does not block: those notes are not blockers, high, or medium, they do not change the Verdict, and they do not count toward `REQUEST_CHANGES` or withhold an `APPROVE`. Off by default, so existing reviews stay as they are until a workflow turns it on.
 
 ### Triggers
 
@@ -272,6 +281,7 @@ is the supported path).
 - **Cost tracking** — Appends cost, turns, and model to the review body
 - **Review dismissal** — Dismisses previous Claude reviews before posting new ones
 - **Typed failure messages** — Distinguishes max-turns, API errors, and missing output
+- **Advisory architecture section** — Opt-in recommendations that never change the review event
 - **Pure bash** — No TypeScript, no node_modules, no build step
 
 ## How It Works

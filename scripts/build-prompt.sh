@@ -4,7 +4,7 @@ set -euo pipefail
 # Assemble the full review prompt from inputs, captured context, and templates.
 # Inputs (env vars): GH_TOKEN, ACTION_PATH, REPO, PR_NUMBER, EVENT_TYPE,
 #   HAS_PREVIOUS, NEW_COMMITS, INCLUDE_PREVIOUS_REVIEW, CONTEXT_INTRO, CRITICAL_RULES,
-#   EXTRA_PROMPT, REVIEW_AUTHORITY, APPROVE_THRESHOLD, APPROVE_MAX_FILES,
+#   EXTRA_PROMPT, INCLUDE_ARCHITECTURE_REVIEW, REVIEW_AUTHORITY, APPROVE_THRESHOLD, APPROVE_MAX_FILES,
 #   DISMISS_PREVIOUS_REVIEWS, FILE_COUNT, MAX_PROMPT_BYTES
 # Inputs (files): /tmp/user-comment.txt (comment triggers)
 # Outputs (GITHUB_OUTPUT): prompt
@@ -216,6 +216,12 @@ esac
 if [ -n "$EXTRA_PROMPT" ]; then
   echo "" >> "$PROMPT_FILE"
   echo "$EXTRA_PROMPT" >> "$PROMPT_FILE"
+fi
+
+# --- Section 12: Advisory architecture pass (opt-in; never changes the review event) ---
+if [ "${INCLUDE_ARCHITECTURE_REVIEW:-}" = "true" ]; then
+  echo "" >> "$PROMPT_FILE"
+  cat "${ACTION_PATH}/templates/architecture-review.md" >> "$PROMPT_FILE"
 fi
 
 # --- Resolve the diff placeholder ---

@@ -35,4 +35,16 @@ grep -q '/tmp/pr-diff.txt' /tmp/claude-prompt.md || fail "escaped: raw fits but 
 printf 'what does $(whoami) do?\n' > /tmp/user-comment.txt
 EVENT_TYPE=issue_comment run 120000 || fail "comment: exit"
 grep -qF 'what does $(whoami) do?' /tmp/claude-prompt.md || fail "comment: not in prompt verbatim"
+
+printf 'diff --git a/x b/x\n+one\n' > /tmp/pr-diff.txt
+echo desc > /tmp/pr-description.txt
+EVENT_TYPE=pull_request
+INCLUDE_ARCHITECTURE_REVIEW=false
+run 120000 || fail "arch off: exit"
+grep -q 'ARCHITECTURE PASS (advisory' /tmp/claude-prompt.md && fail "arch off: pass leaked into prompt"
+INCLUDE_ARCHITECTURE_REVIEW=true
+run 120000 || fail "arch on: exit"
+grep -q 'ARCHITECTURE PASS (advisory' /tmp/claude-prompt.md || fail "arch on: pass missing"
+grep -q 'do not count toward REQUEST_CHANGES' /tmp/claude-prompt.md || fail "arch on: event override missing"
+grep -q 'SUBMITTING THE REVIEW' /tmp/claude-prompt.md || fail "arch on: submit rules missing"
 echo PASS

@@ -25,6 +25,10 @@ inputs:
     description: 'Appended to end of prompt (custom instructions)'
     required: false
     default: ''
+  include-architecture-review:
+    description: 'Add an advisory "## 🏗️ Architecture" section. Recommendations only — never affects the Verdict or the review event (REQUEST_CHANGES / APPROVE / COMMENT).'
+    required: false
+    default: 'false'
   include-pr-description:
     description: 'Feed PR title+body into review prompt'
     required: false
@@ -238,6 +242,7 @@ runs:
         CONTEXT_INTRO: ${{ inputs.context-intro }}
         CRITICAL_RULES: ${{ inputs.critical-rules }}
         EXTRA_PROMPT: ${{ inputs.extra-prompt }}
+        INCLUDE_ARCHITECTURE_REVIEW: ${{ inputs.include-architecture-review }}
         REVIEW_AUTHORITY: ${{ inputs.review-authority }}
         APPROVE_THRESHOLD: ${{ inputs.approve-threshold }}
         APPROVE_MAX_FILES: ${{ inputs.approve-max-files }}
