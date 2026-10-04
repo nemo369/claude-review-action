@@ -138,17 +138,21 @@ cleanup() {
   git -C "$CHECKOUT" worktree remove --force "$WT" >/dev/null 2>&1 || rm -rf "$WT"
 }
 trap cleanup EXIT
-git -C "$CHECKOUT" fetch --no-tags origin "pull/${PR}/head"
+git -C "$CHECKOUT" fetch --depth 1 --no-tags origin "pull/${PR}/head"
 git -C "$CHECKOUT" worktree add --detach "$WT" FETCH_HEAD
 
 echo "preview: model ${MODEL} on ${REPO}#${PR} @ ${SHA}" >&2
 echo "preview: architecture section on, nothing will be posted" >&2
+CLAUDE_PERMS=(--permission-mode bypassPermissions)
+if [ -n "${CI:-}" ]; then
+  CLAUDE_PERMS=(--dangerously-skip-permissions)
+fi
 (
   cd "$WT"
   claude -p \
     --model "$MODEL" \
     --allowedTools "Read,Grep,Glob" \
-    --permission-mode bypassPermissions \
+    "${CLAUDE_PERMS[@]}" \
     --add-dir /tmp \
     < /tmp/claude-prompt.md
 ) | tee /tmp/claude-review-preview.md
