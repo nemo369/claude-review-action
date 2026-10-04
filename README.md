@@ -218,6 +218,13 @@ include-architecture-review: 'true'
 
 Adds one section, `## 🏗️ Architecture`, after What's Done Well and before the Verdict. It recommends structural changes in the diff (reuse, extensibility, two passes that can undo each other) and caps them at 3. It does not block: those notes are not blockers, high, or medium, they do not change the Verdict, and they do not count toward `REQUEST_CHANGES` or withhold an `APPROVE`. Off by default, so existing reviews stay as they are until a workflow turns it on.
 
+To see the section on one PR before you turn it on, run a local preview. It uses the same model as the action (`claude-sonnet-4-6`, unless the workflow sets `model`), builds the same prompt, and prints the review. It does not post.
+
+```bash
+scripts/preview-review.sh toriihq/torii-monorepo 4821 --checkout /path/to/torii-monorepo
+```
+
+
 ### Triggers
 
 | Input | Default | Description |

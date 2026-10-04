@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- `scripts/preview-review.sh` prints the review for one PR locally, with the architecture section on, and does not post.
 - `include-architecture-review` (default `false`). When `true`, the review prompt asks for an advisory `## 🏗️ Architecture` section — ranked recommendations about the diff, capped at 3. The section does not change the Verdict or the review event (`REQUEST_CHANGES` / `APPROVE` / `COMMENT`). Re-reviews do not reconcile those notes.
 
 ## [1.2.1] - 2026-10-01
