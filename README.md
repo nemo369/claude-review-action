@@ -217,7 +217,7 @@ Only `anthropic-api-key` is required. Everything else has sensible defaults.
 include-architecture-review: 'true'
 ```
 
-Adds one section, `## 🏗️ Architecture`, after What's Done Well and before the Verdict. It states every accurate structural finding, including an inherited one the owner can still decide on. At most 3 are written in full; the rest are one line each. What it looks for comes from `architecture-guide-path` (a file in the repo under review). With no file, it uses a short generic guide: separation of concerns, reuse, duplication, and extensibility. It does not block: those notes are not blockers, high, or medium, they do not change the Verdict, and they do not count toward `REQUEST_CHANGES` or withhold an `APPROVE`. Off by default, so existing reviews stay as they are until a workflow turns it on.
+Adds one section, `## 🏗️ Architecture`, after What's Done Well and before the Verdict. It is a checklist: one line per item in `architecture-guide-path`, and each line is a finding with file:line or `none`. An inherited pattern stays on its line. A correctness bug stays in a severity section and is not repeated here. With no file, the generic guide is separation of concerns, reuse, duplication, and readable functions. It does not block: those notes are not blockers, high, or medium, they do not change the Verdict, and they do not count toward `REQUEST_CHANGES` or withhold an `APPROVE`. Off by default, so existing reviews stay as they are until a workflow turns it on.
 
 To see the section on one PR before you turn it on, run a local preview. It uses the same model as the action (`claude-sonnet-4-6`, unless the workflow sets `model`), builds the same prompt, and prints the review. It does not post.
 

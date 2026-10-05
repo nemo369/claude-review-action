@@ -44,17 +44,19 @@ EVENT_TYPE=pull_request INCLUDE_ARCHITECTURE_REVIEW=true EXTRA_PROMPT='EXTRA_PRO
 grep -q 'not when answering a direct question' /tmp/claude-prompt.md || fail "arch on: question skip missing"
 grep -q 'Choose the event exactly as SUBMITTING THE REVIEW above says' /tmp/claude-prompt.md || fail "arch on: event override missing"
 grep -q 'Choose REQUEST_CHANGES / APPROVE / COMMENT from the severity sections only' /tmp/claude-prompt.md && fail "arch on: override restates the event rules"
-grep -q 'If you have an accurate structural finding, write it' /tmp/claude-prompt.md || fail "arch on: must require stating an accurate finding"
+grep -q 'One line per item in the guide below' /tmp/claude-prompt.md || fail "arch on: checklist missing"
+grep -q '— none' /tmp/claude-prompt.md || fail "arch on: none option missing"
+grep -q 'severity section only' /tmp/claude-prompt.md || fail "arch on: bugs must stay out of the checklist"
 grep -q 'No named existing thing, drop it' /tmp/claude-prompt.md && fail "arch on: reuse drop rule must be gone"
 grep -q 'not a thing to fix here' /tmp/claude-prompt.md && fail "arch on: inherited must not be dismissed"
 grep -q 'close to the turn limit' /tmp/claude-prompt.md && fail "arch on: turn-limit skip must be gone"
 grep -q '@@CLAUDE_REVIEW_ARCHITECTURE_GUIDE@@' /tmp/claude-prompt.md && fail "arch on: guide placeholder left"
-grep -q 'repeated in several places' /tmp/claude-prompt.md || fail "arch on: generic guide missing"
+grep -q 'Readable functions' /tmp/claude-prompt.md || fail "arch on: generic guide missing"
 grep -q 'Composition of passes' /tmp/claude-prompt.md && fail "arch on: company axes leaked into the default guide"
 printf 'ARCH_GUIDE_SENTINEL\n' > /tmp/architecture-guide.md
 EVENT_TYPE=pull_request INCLUDE_ARCHITECTURE_REVIEW=true EXTRA_PROMPT='EXTRA_PROMPT_SENTINEL' run 120000 || fail "arch guide: exit"
 grep -q 'ARCH_GUIDE_SENTINEL' /tmp/claude-prompt.md || fail "arch guide: repo guide missing"
-grep -q 'repeated in several places' /tmp/claude-prompt.md && fail "arch guide: generic guide still present"
+grep -q 'Readable functions' /tmp/claude-prompt.md && fail "arch guide: generic guide still present"
 rm -f /tmp/architecture-guide.md
 ARCH_LINE=$(grep -n 'ARCHITECTURE PASS (advisory' /tmp/claude-prompt.md | head -1 | cut -d: -f1)
 SUBMIT_LINE=$(grep -n 'SUBMITTING THE REVIEW' /tmp/claude-prompt.md | head -1 | cut -d: -f1)
