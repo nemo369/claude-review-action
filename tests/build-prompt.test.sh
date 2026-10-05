@@ -40,27 +40,21 @@ printf 'diff --git a/x b/x\n+one\n' > /tmp/pr-diff.txt
 echo desc > /tmp/pr-description.txt
 EVENT_TYPE=pull_request INCLUDE_ARCHITECTURE_REVIEW=false EXTRA_PROMPT= run 120000 || fail "arch off: exit"
 grep -q 'ARCHITECTURE PASS (advisory' /tmp/claude-prompt.md && fail "arch off: pass leaked into prompt"
-EVENT_TYPE=pull_request INCLUDE_ARCHITECTURE_REVIEW=true EXTRA_PROMPT='EXTRA_PROMPT_SENTINEL' run 120000 || fail "arch on: exit"
-grep -q 'not when answering a direct question' /tmp/claude-prompt.md || fail "arch on: question skip missing"
-grep -q 'Choose the event exactly as SUBMITTING THE REVIEW above says' /tmp/claude-prompt.md || fail "arch on: event override missing"
-grep -q 'Choose REQUEST_CHANGES / APPROVE / COMMENT from the severity sections only' /tmp/claude-prompt.md && fail "arch on: override restates the event rules"
-grep -q 'One line per item in the guide below' /tmp/claude-prompt.md || fail "arch on: checklist missing"
-grep -q '— none' /tmp/claude-prompt.md || fail "arch on: none option missing"
-grep -q 'severity section only' /tmp/claude-prompt.md || fail "arch on: bugs must stay out of the checklist"
-grep -q 'No named existing thing, drop it' /tmp/claude-prompt.md && fail "arch on: reuse drop rule must be gone"
-grep -q 'not a thing to fix here' /tmp/claude-prompt.md && fail "arch on: inherited must not be dismissed"
-grep -q 'close to the turn limit' /tmp/claude-prompt.md && fail "arch on: turn-limit skip must be gone"
-grep -q '@@CLAUDE_REVIEW_ARCHITECTURE_GUIDE@@' /tmp/claude-prompt.md && fail "arch on: guide placeholder left"
-grep -q 'Readable functions' /tmp/claude-prompt.md || fail "arch on: generic guide missing"
-grep -q 'Composition of passes' /tmp/claude-prompt.md && fail "arch on: company axes leaked into the default guide"
-printf 'ARCH_GUIDE_SENTINEL\n' > /tmp/architecture-guide.md
-EVENT_TYPE=pull_request INCLUDE_ARCHITECTURE_REVIEW=true EXTRA_PROMPT='EXTRA_PROMPT_SENTINEL' run 120000 || fail "arch guide: exit"
-grep -q 'ARCH_GUIDE_SENTINEL' /tmp/claude-prompt.md || fail "arch guide: repo guide missing"
-grep -q 'Readable functions' /tmp/claude-prompt.md && fail "arch guide: generic guide still present"
+DISMISS_PREVIOUS_REVIEWS=true EVENT_TYPE=pull_request INCLUDE_ARCHITECTURE_REVIEW=true EXTRA_PROMPT='EXTRA_PROMPT_SENTINEL' run 120000 || fail "arch on: exit"
+grep -q 'Write one line per item in the guide below' /tmp/claude-prompt.md && fail "arch on: checklist leaked into the main review"
+grep -q 'startswith("## 🏗️ Architecture")' /tmp/claude-prompt.md || fail "arch on: dismiss must spare the architecture review"
+grep -q 'EXTRA_PROMPT_SENTINEL' /tmp/claude-prompt.md || fail "arch on: extra prompt missing"
 rm -f /tmp/architecture-guide.md
-ARCH_LINE=$(grep -n 'ARCHITECTURE PASS (advisory' /tmp/claude-prompt.md | head -1 | cut -d: -f1)
-SUBMIT_LINE=$(grep -n 'SUBMITTING THE REVIEW' /tmp/claude-prompt.md | head -1 | cut -d: -f1)
-EXTRA_LINE=$(grep -n 'EXTRA_PROMPT_SENTINEL' /tmp/claude-prompt.md | head -1 | cut -d: -f1)
-[ -n "$ARCH_LINE" ] && [ -n "$SUBMIT_LINE" ] && [ "$ARCH_LINE" -gt "$SUBMIT_LINE" ] || fail "arch on: pass must follow SUBMITTING THE REVIEW"
-[ -n "$EXTRA_LINE" ] && [ "$EXTRA_LINE" -gt "$ARCH_LINE" ] || fail "arch on: extra-prompt must stay last"
+ARCHITECTURE_BUILD_ONLY=1 ACTION_PATH="$PWD" bash scripts/architecture-review.sh || fail "arch prompt: exit"
+grep -q 'Write one line per item in the guide below' /tmp/claude-architecture-prompt.md || fail "arch prompt: checklist missing"
+grep -q '— none' /tmp/claude-architecture-prompt.md || fail "arch prompt: none option missing"
+grep -q 'Grep outside the diff' /tmp/claude-architecture-prompt.md || fail "arch prompt: outside-diff search missing"
+grep -q 'Readable functions' /tmp/claude-architecture-prompt.md || fail "arch prompt: generic guide missing"
+grep -q 'Composition of passes' /tmp/claude-architecture-prompt.md && fail "arch prompt: company axes leaked into the default guide"
+grep -q '@@CLAUDE_REVIEW_ARCHITECTURE_GUIDE@@' /tmp/claude-architecture-prompt.md && fail "arch prompt: placeholder left"
+printf 'ARCH_GUIDE_SENTINEL\n' > /tmp/architecture-guide.md
+ARCHITECTURE_BUILD_ONLY=1 ACTION_PATH="$PWD" bash scripts/architecture-review.sh || fail "arch guide: exit"
+grep -q 'ARCH_GUIDE_SENTINEL' /tmp/claude-architecture-prompt.md || fail "arch guide: repo guide missing"
+grep -q 'Readable functions' /tmp/claude-architecture-prompt.md && fail "arch guide: generic guide still present"
+rm -f /tmp/architecture-guide.md
 echo PASS

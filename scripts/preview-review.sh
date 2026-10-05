@@ -126,21 +126,6 @@ if grep -q '^skipped=true$' "$GITHUB_OUTPUT"; then
   exit 1
 fi
 
-export ACTION_PATH EVENT_TYPE=pull_request HAS_PREVIOUS=false NEW_COMMITS=
-export INCLUDE_PREVIOUS_REVIEW=false INCLUDE_ARCHITECTURE_REVIEW=true
-export CONTEXT_INTRO CRITICAL_RULES EXTRA_PROMPT REVIEW_AUTHORITY APPROVE_THRESHOLD
-export APPROVE_MAX_FILES DISMISS_PREVIOUS_REVIEWS=false FILE_COUNT
-# Local stdin has no 128 KB env-var cap, so keep the diff inline instead of bailing out.
-export MAX_PROMPT_BYTES=2000000
-bash "$ACTION_PATH/scripts/build-prompt.sh" >/dev/null
-
-cat >> /tmp/claude-prompt.md <<'EOF'
-
-PREVIEW MODE:
-Print the full review as your final message.
-Do not run gh. Do not call the GitHub API. Do not dismiss reviews. Do not post a comment or a review.
-EOF
-
 SHA="$(gh pr view "$PR" --repo "$REPO" --json headRefOid --jq '.headRefOid')"
 WT="/tmp/claude-review-wt-${PR}-$$"
 cleanup() {
@@ -150,18 +135,7 @@ trap cleanup EXIT
 git -C "$CHECKOUT" fetch --depth 1 --no-tags origin "pull/${PR}/head"
 git -C "$CHECKOUT" worktree add --detach "$WT" FETCH_HEAD
 
-echo "preview: model ${MODEL} on ${REPO}#${PR} @ ${SHA}" >&2
-echo "preview: architecture section on, nothing will be posted" >&2
-CLAUDE_PERMS=(--permission-mode bypassPermissions)
-if [ -n "${CI:-}" ]; then
-  CLAUDE_PERMS=(--dangerously-skip-permissions)
-fi
-(
-  cd "$WT"
-  claude -p \
-    --model "$MODEL" \
-    --allowedTools "Read,Grep,Glob" \
-    "${CLAUDE_PERMS[@]}" \
-    --add-dir /tmp \
-    < /tmp/claude-prompt.md
-) | tee /tmp/claude-review-preview.md
+echo "preview: separate architecture review, model ${MODEL} on ${REPO}#${PR} @ ${SHA}" >&2
+echo "preview: comment review only, nothing will be posted" >&2
+export ACTION_PATH MODEL ARCHITECTURE_PREVIEW=1 ARCHITECTURE_WORKDIR="$WT"
+bash "$ACTION_PATH/scripts/architecture-review.sh" | tee /tmp/claude-review-preview.md

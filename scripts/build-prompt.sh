@@ -151,9 +151,10 @@ if [ "$DISMISS_PREVIOUS_REVIEWS" = "true" ]; then
   cat >> "$PROMPT_FILE" <<'DISMISS_BLOCK'
 
 DISMISSING PREVIOUS REVIEWS:
-Before submitting your new review, dismiss previous Claude reviews so only the latest is visible.
+Before submitting your new review, dismiss previous Claude code reviews so only the latest is visible.
+Do not dismiss a review whose body starts with "## 🏗️ Architecture". That review is separate and stays.
 Run this SINGLE command (it checks and dismisses in one step — no separate check needed):
-  REVIEW_IDS=$(gh api repos/$REPO/pulls/$PR_NUMBER/reviews --jq '[.[] | select(.user.login == "claude[bot]" and (.state == "APPROVED" or .state == "CHANGES_REQUESTED" or .state == "COMMENTED")) | .id] | .[]' 2>/dev/null); if [ -n "$REVIEW_IDS" ]; then for REVIEW_ID in $REVIEW_IDS; do gh api repos/$REPO/pulls/$PR_NUMBER/reviews/$REVIEW_ID/dismissals --method PUT -f message="Superseded by new review" -f event="DISMISS" 2>/dev/null || true; done; echo "Dismissed previous reviews"; else echo "No previous reviews to dismiss"; fi
+  REVIEW_IDS=$(gh api repos/$REPO/pulls/$PR_NUMBER/reviews --jq '[.[] | select(.user.login == "claude[bot]" and (.state == "APPROVED" or .state == "CHANGES_REQUESTED" or .state == "COMMENTED") and ((.body // "") | startswith("## 🏗️ Architecture") | not)) | .id] | .[]' 2>/dev/null); if [ -n "$REVIEW_IDS" ]; then for REVIEW_ID in $REVIEW_IDS; do gh api repos/$REPO/pulls/$PR_NUMBER/reviews/$REVIEW_ID/dismissals --method PUT -f message="Superseded by new review" -f event="DISMISS" 2>/dev/null || true; done; echo "Dismissed previous reviews"; else echo "No previous reviews to dismiss"; fi
 IMPORTANT: Only dismiss previous reviews when performing a FULL code review. Do NOT dismiss when responding to a user question via @claude.
 DISMISS_BLOCK
 fi
@@ -213,25 +214,9 @@ AUTH_FULL_NORMAL
     ;;
 esac
 
-# --- Section 11: Advisory architecture pass (opt-in; never changes the review event) ---
-# Before extra-prompt so that input stays the last word in the prompt.
-if [ "${INCLUDE_ARCHITECTURE_REVIEW:-}" = "true" ]; then
-  echo "" >> "$PROMPT_FILE"
-  if [ -s /tmp/architecture-guide.md ]; then
-    ARCHITECTURE_GUIDE_FILE=/tmp/architecture-guide.md
-  else
-    ARCHITECTURE_GUIDE_FILE="${ACTION_PATH}/templates/architecture-guide.md"
-  fi
-  awk -v guide="$ARCHITECTURE_GUIDE_FILE" '
-    $0 == "@@CLAUDE_REVIEW_ARCHITECTURE_GUIDE@@" {
-      while ((getline line < guide) > 0) print line
-      next
-    }
-    { print }
-  ' "${ACTION_PATH}/templates/architecture-review.md" >> "$PROMPT_FILE"
-fi
+# Architecture is a separate review (scripts/architecture-review.sh). It is not part of this prompt.
 
-# --- Section 12: Extra prompt (if provided) ---
+# --- Section 11: Extra prompt (if provided) ---
 if [ -n "$EXTRA_PROMPT" ]; then
   echo "" >> "$PROMPT_FILE"
   echo "$EXTRA_PROMPT" >> "$PROMPT_FILE"

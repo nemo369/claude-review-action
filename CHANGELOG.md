@@ -4,7 +4,7 @@
 
 ### Added
 - `scripts/preview-review.sh` prints the review for one PR locally, with the architecture section on, and does not post.
-- `include-architecture-review` (default `false`). When `true`, the review prompt asks for an advisory `## 🏗️ Architecture` checklist: one line per guide item, either a finding with file:line or `none`. The section does not change the Verdict or the review event (`REQUEST_CHANGES` / `APPROVE` / `COMMENT`). Re-reviews do not reconcile those notes.
+- `include-architecture-review` (default `false`). When `true`, a second call posts a separate `COMMENT` review with an architecture checklist (one line per guide item, a finding or `none`). It is not part of the code review, and a later code review does not dismiss it. The section does not change the Verdict or the review event (`REQUEST_CHANGES` / `APPROVE` / `COMMENT`). Re-reviews do not reconcile those notes.
 - `architecture-guide-path`. A repo file of what that section looks for. Empty uses the action's generic guide.
 
 ## [1.2.1] - 2026-10-01
