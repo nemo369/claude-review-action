@@ -44,6 +44,10 @@ EVENT_TYPE=pull_request INCLUDE_ARCHITECTURE_REVIEW=true EXTRA_PROMPT='EXTRA_PRO
 grep -q 'not when answering a direct question' /tmp/claude-prompt.md || fail "arch on: question skip missing"
 grep -q 'Choose the event exactly as SUBMITTING THE REVIEW above says' /tmp/claude-prompt.md || fail "arch on: event override missing"
 grep -q 'Choose REQUEST_CHANGES / APPROVE / COMMENT from the severity sections only' /tmp/claude-prompt.md && fail "arch on: override restates the event rules"
+grep -q 'If you have an accurate structural finding, write it' /tmp/claude-prompt.md || fail "arch on: must require stating an accurate finding"
+grep -q 'No named existing thing, drop it' /tmp/claude-prompt.md && fail "arch on: reuse drop rule must be gone"
+grep -q 'not a thing to fix here' /tmp/claude-prompt.md && fail "arch on: inherited must not be dismissed"
+grep -q 'close to the turn limit' /tmp/claude-prompt.md && fail "arch on: turn-limit skip must be gone"
 ARCH_LINE=$(grep -n 'ARCHITECTURE PASS (advisory' /tmp/claude-prompt.md | head -1 | cut -d: -f1)
 SUBMIT_LINE=$(grep -n 'SUBMITTING THE REVIEW' /tmp/claude-prompt.md | head -1 | cut -d: -f1)
 EXTRA_LINE=$(grep -n 'EXTRA_PROMPT_SENTINEL' /tmp/claude-prompt.md | head -1 | cut -d: -f1)

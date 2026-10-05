@@ -216,7 +216,7 @@ Only `anthropic-api-key` is required. Everything else has sensible defaults.
 include-architecture-review: 'true'
 ```
 
-Adds one section, `## 🏗️ Architecture`, after What's Done Well and before the Verdict. It recommends structural changes in the diff (reuse, extensibility, two passes that can undo each other) and caps them at 3. It does not block: those notes are not blockers, high, or medium, they do not change the Verdict, and they do not count toward `REQUEST_CHANGES` or withhold an `APPROVE`. Off by default, so existing reviews stay as they are until a workflow turns it on.
+Adds one section, `## 🏗️ Architecture`, after What's Done Well and before the Verdict. It states every accurate structural finding (separation of concerns, reuse, duplication, extensibility, and the other axes in the template), including an inherited one the owner can still decide on. At most 3 are written in full; the rest are one line each. It does not block: those notes are not blockers, high, or medium, they do not change the Verdict, and they do not count toward `REQUEST_CHANGES` or withhold an `APPROVE`. Off by default, so existing reviews stay as they are until a workflow turns it on.
 
 To see the section on one PR before you turn it on, run a local preview. It uses the same model as the action (`claude-sonnet-4-6`, unless the workflow sets `model`), builds the same prompt, and prints the review. It does not post.
 
