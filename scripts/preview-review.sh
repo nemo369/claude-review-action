@@ -81,6 +81,7 @@ keys = {
     "CONTEXT_INTRO": "context-intro",
     "CRITICAL_RULES": "critical-rules",
     "GUIDE_PATH": "review-guide-path",
+    "ARCH_GUIDE_PATH": "architecture-guide-path",
     "EXTRA_PROMPT": "extra-prompt",
     "MAX_FILES": "max-files",
     "MAX_DIFF_LINES": "max-diff-lines",
@@ -100,6 +101,14 @@ if [ -n "$GUIDE_PATH" ]; then
     --jq '.content' | base64 -d > /tmp/review-guide.md
 else
   : > /tmp/review-guide.md
+fi
+rm -f /tmp/architecture-guide.md
+if [ -n "${ARCH_GUIDE_PATH:-}" ]; then
+  gh api "repos/${REPO}/contents/${ARCH_GUIDE_PATH}?ref=${DEFAULT_BRANCH}" \
+    --jq '.content' | base64 -d > /tmp/architecture-guide.md 2>/dev/null || true
+fi
+if [ ! -s /tmp/architecture-guide.md ] && [ -n "$CHECKOUT" ] && [ -f "$CHECKOUT/.github/claude-architecture-guide.md" ]; then
+  cp "$CHECKOUT/.github/claude-architecture-guide.md" /tmp/architecture-guide.md
 fi
 : > /tmp/truncated-files.txt
 : > /tmp/user-comment.txt

@@ -29,6 +29,10 @@ inputs:
     description: 'Add an advisory "## 🏗️ Architecture" section. Recommendations only — never affects the Verdict or the review event (REQUEST_CHANGES / APPROVE / COMMENT).'
     required: false
     default: 'false'
+  architecture-guide-path:
+    description: 'Path to a repo markdown file of what the architecture section should look for. Empty = the action generic guide. Ignored unless include-architecture-review is true.'
+    required: false
+    default: ''
   include-pr-description:
     description: 'Feed PR title+body into review prompt'
     required: false
@@ -171,6 +175,18 @@ runs:
         GH_TOKEN: ${{ github.token }}
         REPO: ${{ github.repository }}
         GUIDE_PATH: ${{ inputs.review-guide-path }}
+        DEFAULT_BRANCH: ${{ inputs.default-branch }}
+
+    - name: Fetch architecture guide
+      if: inputs.include-architecture-review == 'true' && inputs.architecture-guide-path != ''
+      shell: bash
+      run: bash ${{ github.action_path }}/scripts/fetch-guide.sh
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO: ${{ github.repository }}
+        GUIDE_PATH: ${{ inputs.architecture-guide-path }}
+        GUIDE_OUT: /tmp/architecture-guide.md
+        GUIDE_PR_COPY: /tmp/architecture-guide-pr-branch.md
         DEFAULT_BRANCH: ${{ inputs.default-branch }}
 
     - name: Capture context

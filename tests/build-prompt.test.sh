@@ -2,7 +2,7 @@
 # Self-check for the prompt size cap: bash tests/build-prompt.test.sh
 set -uo pipefail
 cd "$(dirname "$0")/.."
-T=$(mktemp -d); trap 'rm -rf "$T" /tmp/claude-prompt.md /tmp/pr-diff.txt /tmp/pr-description.txt /tmp/review-guide.md /tmp/truncated-files.txt' EXIT
+T=$(mktemp -d); trap 'rm -rf "$T" /tmp/claude-prompt.md /tmp/pr-diff.txt /tmp/pr-description.txt /tmp/review-guide.md /tmp/architecture-guide.md /tmp/truncated-files.txt' EXIT
 mkdir -p "$T/bin"; printf '#!/usr/bin/env bash\necho "$*" >> "%s/gh.log"\n' "$T" > "$T/bin/gh"; chmod +x "$T/bin/gh"
 for v in $(grep -oE '\$\{?[A-Z_]+' scripts/build-prompt.sh | sed 's/[${]//g' | sort -u); do export "$v="; done
 export PATH="$T/bin:$PATH" ACTION_PATH="$PWD" REPO=x PR_NUMBER=1 EVENT_TYPE=pull_request REVIEW_AUTHORITY=comment-only GITHUB_RUN_ID=1
@@ -48,6 +48,14 @@ grep -q 'If you have an accurate structural finding, write it' /tmp/claude-promp
 grep -q 'No named existing thing, drop it' /tmp/claude-prompt.md && fail "arch on: reuse drop rule must be gone"
 grep -q 'not a thing to fix here' /tmp/claude-prompt.md && fail "arch on: inherited must not be dismissed"
 grep -q 'close to the turn limit' /tmp/claude-prompt.md && fail "arch on: turn-limit skip must be gone"
+grep -q '@@CLAUDE_REVIEW_ARCHITECTURE_GUIDE@@' /tmp/claude-prompt.md && fail "arch on: guide placeholder left"
+grep -q 'repeated in several places' /tmp/claude-prompt.md || fail "arch on: generic guide missing"
+grep -q 'Composition of passes' /tmp/claude-prompt.md && fail "arch on: company axes leaked into the default guide"
+printf 'ARCH_GUIDE_SENTINEL\n' > /tmp/architecture-guide.md
+EVENT_TYPE=pull_request INCLUDE_ARCHITECTURE_REVIEW=true EXTRA_PROMPT='EXTRA_PROMPT_SENTINEL' run 120000 || fail "arch guide: exit"
+grep -q 'ARCH_GUIDE_SENTINEL' /tmp/claude-prompt.md || fail "arch guide: repo guide missing"
+grep -q 'repeated in several places' /tmp/claude-prompt.md && fail "arch guide: generic guide still present"
+rm -f /tmp/architecture-guide.md
 ARCH_LINE=$(grep -n 'ARCHITECTURE PASS (advisory' /tmp/claude-prompt.md | head -1 | cut -d: -f1)
 SUBMIT_LINE=$(grep -n 'SUBMITTING THE REVIEW' /tmp/claude-prompt.md | head -1 | cut -d: -f1)
 EXTRA_LINE=$(grep -n 'EXTRA_PROMPT_SENTINEL' /tmp/claude-prompt.md | head -1 | cut -d: -f1)

@@ -18,18 +18,7 @@ Do not skip this section to save turns. A finding you are sure of is part of the
 
 ### What to look for
 
-Review the diff, plus surrounding code when you need it to judge reuse. State a finding this diff introduced, made worse, or copied forward. A pre-existing pattern this diff extends is still a finding: label it Inherited and write it in full, so the owner can decide.
-
-1. Separation of concerns — one function decides and does. Name the two jobs and where the seam belongs.
-2. Reuse — a new helper that already exists. Name the existing thing (path + symbol) when you have it. If you can see the duplicate and have not opened the original, still state it and say the original was not opened.
-3. Duplication — the same logic in 2+ places. Name both locations, and which is the source of truth when you know it.
-4. Readable functions — over ~40 lines, deep nesting, a name that needs "and". Cite the line range.
-5. Decoupling — a dependency pointing the wrong way. Say concretely what breaks if X changes.
-6. Extensibility — the next likely change is shotgun surgery. Name that change and count the files it touches.
-7. Design practice — a table beaten into conditionals, a default that fails open, an abstraction with one implementation and no second in sight. Name the invariant at risk.
-8. Composition of passes — two transforms over the same structure, applied at different points. Name both passes, their order, and an input that would make the later one undo the earlier.
-
-A comment that explains a ceiling does not erase the finding. State the structure and mention the ceiling, so the owner can keep the shortcut on purpose.
+@@CLAUDE_REVIEW_ARCHITECTURE_GUIDE@@
 
 ### Finding bar
 

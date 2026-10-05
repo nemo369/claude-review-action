@@ -5,6 +5,7 @@ set -euo pipefail
 # Inputs (env vars): GH_TOKEN, ACTION_PATH, REPO, PR_NUMBER, EVENT_TYPE,
 #   HAS_PREVIOUS, NEW_COMMITS, INCLUDE_PREVIOUS_REVIEW, CONTEXT_INTRO, CRITICAL_RULES,
 #   EXTRA_PROMPT, INCLUDE_ARCHITECTURE_REVIEW, REVIEW_AUTHORITY, APPROVE_THRESHOLD, APPROVE_MAX_FILES,
+#   /tmp/architecture-guide.md when a repo supplies one; otherwise templates/architecture-guide.md
 #   DISMISS_PREVIOUS_REVIEWS, FILE_COUNT, MAX_PROMPT_BYTES
 # Inputs (files): /tmp/user-comment.txt (comment triggers)
 # Outputs (GITHUB_OUTPUT): prompt
@@ -216,7 +217,18 @@ esac
 # Before extra-prompt so that input stays the last word in the prompt.
 if [ "${INCLUDE_ARCHITECTURE_REVIEW:-}" = "true" ]; then
   echo "" >> "$PROMPT_FILE"
-  cat "${ACTION_PATH}/templates/architecture-review.md" >> "$PROMPT_FILE"
+  if [ -s /tmp/architecture-guide.md ]; then
+    ARCHITECTURE_GUIDE_FILE=/tmp/architecture-guide.md
+  else
+    ARCHITECTURE_GUIDE_FILE="${ACTION_PATH}/templates/architecture-guide.md"
+  fi
+  awk -v guide="$ARCHITECTURE_GUIDE_FILE" '
+    $0 == "@@CLAUDE_REVIEW_ARCHITECTURE_GUIDE@@" {
+      while ((getline line < guide) > 0) print line
+      next
+    }
+    { print }
+  ' "${ACTION_PATH}/templates/architecture-review.md" >> "$PROMPT_FILE"
 fi
 
 # --- Section 12: Extra prompt (if provided) ---
