@@ -12,15 +12,22 @@ if [ ! -s "$GUIDE" ]; then
   GUIDE="${ACTION_PATH}/templates/architecture-guide.md"
 fi
 
+ARCHITECTURE_WORKDIR="${ARCHITECTURE_WORKDIR:-.}" python3 "$ACTION_PATH/scripts/architecture-candidates.py"
+
 {
   cat <<'INTRO'
 You are writing a separate architecture review. It is not the code review.
 Do not write blockers, highs, mediums, or lows.
 Do not approve. Do not request changes. Do not call gh. Do not post anything.
 Read /tmp/pr-diff.txt. If /tmp/truncated-files.txt lists files, Read each /tmp/pr-diffs/<path>.diff as well.
-The repository is the working directory. For Reuse and Duplication, Grep outside the diff before you write none.
+Read every changed file and every sibling file named in the candidate list.
+The candidate list is the floor. Judge every textual hit. Also add a duplication the list missed when two functions do the same job in different words.
+`none` on Duplication is allowed only after those files were read and every hit was judged.
 
 INTRO
+  echo ""
+  cat /tmp/architecture-candidates.md
+  echo ""
   awk -v guide="$GUIDE" '
     $0 == "@@CLAUDE_REVIEW_ARCHITECTURE_GUIDE@@" {
       while ((getline line < guide) > 0) print line

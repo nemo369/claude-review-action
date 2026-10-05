@@ -9,7 +9,7 @@ Each line is one of:
 - `- <name> — Inherited: <what is wrong> at file:line. <smallest fix>.`
 - `- <name> — none`
 
-`none` means you looked and there is nothing on that axis. For Reuse and Duplication, looking means Grep outside the diff, not only the lines in the pull request. `none` without that search is a miss. A pre-existing pattern this diff extends is still a finding: start that line with Inherited.
+`none` means you read the changed files, the sibling files, and judged every textual hit, and there is still nothing on that axis. A pre-existing pattern this diff extends is still a finding: start that line with Inherited.
 
 A correctness bug is not this review. Leave it off.
 
