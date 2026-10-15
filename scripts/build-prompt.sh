@@ -111,8 +111,9 @@ if [ -s /tmp/excluded-files.txt ]; then
 These files changed but match \`exclude-paths\`, so they are not in the diff. Do not review them or report findings on them.
 
 EXCLUDED_HEADER
-  head -n 50 /tmp/excluded-files.txt | sed 's/.*/- `&`/' >> "$PROMPT_FILE"
-  [ "$EXCLUDED_COUNT" -le 50 ] || echo "- … and $((EXCLUDED_COUNT - 50)) more" >> "$PROMPT_FILE"
+  LIST_CAP=50
+  head -n "$LIST_CAP" /tmp/excluded-files.txt | sed 's/.*/- `&`/' >> "$PROMPT_FILE"
+  [ "$EXCLUDED_COUNT" -le "$LIST_CAP" ] || echo "- … and $((EXCLUDED_COUNT - LIST_CAP)) more" >> "$PROMPT_FILE"
 fi
 
 # --- Section 8: Focus info (re-review with new commits — always shown, even without reconciliation) ---
@@ -195,14 +196,14 @@ AUTH_RC
   full)
     # NOTE: Unquoted heredoc means shell expansion is active.
     # \$REPO and \$PR_NUMBER are escaped → become literal $REPO/$PR_NUMBER in Claude's prompt.
-    # ${APPROVE_MAX_FILES} and threshold conditions expand to actual values (intentional).
+    # Threshold conditions expand to actual values (intentional).
     if [ "$APPROVE_THRESHOLD" = "strict" ]; then
       cat >> "$PROMPT_FILE" <<AUTH_FULL_STRICT
 
 SUBMITTING THE REVIEW — choose the event based on your findings:
 1. If ANY 🔴 BLOCKER, 🟠 HIGH, or 🟡 MEDIUM findings exist → REQUEST_CHANGES:
      gh api repos/\$REPO/pulls/\$PR_NUMBER/reviews --method POST -f event=REQUEST_CHANGES -f body="your review"
-2. If ONLY 🔵 LOW findings (or no findings at all) AND the PR has <= ${APPROVE_MAX_FILES} files → APPROVE:
+2. If ONLY 🔵 LOW findings (or no findings at all) → APPROVE:
      gh api repos/\$REPO/pulls/\$PR_NUMBER/reviews --method POST -f event=APPROVE -f body="your review"
 3. Otherwise → COMMENT:
      gh api repos/\$REPO/pulls/\$PR_NUMBER/reviews --method POST -f event=COMMENT -f body="your review"
@@ -215,7 +216,7 @@ AUTH_FULL_STRICT
 SUBMITTING THE REVIEW — choose the event based on your findings:
 1. If ANY 🔴 BLOCKER or 🟠 HIGH findings exist → REQUEST_CHANGES:
      gh api repos/\$REPO/pulls/\$PR_NUMBER/reviews --method POST -f event=REQUEST_CHANGES -f body="your review"
-2. If NO findings above 🟡 MEDIUM (i.e., only MEDIUM/LOW or no findings) AND the PR has <= ${APPROVE_MAX_FILES} files → APPROVE:
+2. If NO findings above 🟡 MEDIUM (i.e., only MEDIUM/LOW or no findings) → APPROVE:
      gh api repos/\$REPO/pulls/\$PR_NUMBER/reviews --method POST -f event=APPROVE -f body="your review"
 3. Otherwise → COMMENT:
      gh api repos/\$REPO/pulls/\$PR_NUMBER/reviews --method POST -f event=COMMENT -f body="your review"
@@ -224,10 +225,12 @@ SUBMITTING THE REVIEW — choose the event based on your findings:
 AUTH_FULL_NORMAL
     fi
     NO_APPROVE=""
-    if [ -n "$APPROVE_MAX_CHANGED_LINES" ] && [ "${CHANGED_LINES:-0}" -gt "$APPROVE_MAX_CHANGED_LINES" ]; then
+    if [ "${FILE_COUNT:-}" = "0" ]; then
+      NO_APPROVE="No changed files are left to review."
+    elif [ -n "$APPROVE_MAX_FILES" ] && [ "${FILE_COUNT:-0}" -gt "$APPROVE_MAX_FILES" ]; then
+      NO_APPROVE="This PR has ${FILE_COUNT} files (approval limit: ${APPROVE_MAX_FILES})."
+    elif [ -n "$APPROVE_MAX_CHANGED_LINES" ] && [ "${CHANGED_LINES:-0}" -gt "$APPROVE_MAX_CHANGED_LINES" ]; then
       NO_APPROVE="This PR changes ${CHANGED_LINES} lines (approval limit: ${APPROVE_MAX_CHANGED_LINES})."
-    elif [ "${FILE_COUNT:-}" = "0" ] && [ -s /tmp/excluded-files.txt ]; then
-      NO_APPROVE="Every changed file is excluded from review."
     fi
     [ -z "$NO_APPROVE" ] || printf '\n⚠️ %s You MUST NOT APPROVE this PR — use COMMENT where you would have approved.\n' "$NO_APPROVE" >> "$PROMPT_FILE"
     ;;

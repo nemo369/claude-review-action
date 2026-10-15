@@ -160,6 +160,10 @@ runs:
       env:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
         REVIEW_AUTHORITY: ${{ inputs.review-authority }}
+        MAX_FILES: ${{ inputs.max-files }}
+        MAX_CHANGED_LINES: ${{ inputs.max-changed-lines }}
+        APPROVE_MAX_FILES: ${{ inputs.approve-max-files }}
+        APPROVE_MAX_CHANGED_LINES: ${{ inputs.approve-max-changed-lines }}
         GH_TOKEN: ${{ github.token }}
         REPO: ${{ github.repository }}
         PR_NUMBER: ${{ steps.resolve-pr.outputs.pr_number }}

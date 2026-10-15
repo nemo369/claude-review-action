@@ -40,8 +40,8 @@ grep -qF 'what does $(whoami) do?' /tmp/claude-prompt.md || fail "comment: not i
 : > /tmp/user-comment.txt; printf 'package-lock.json\n$(whoami)/gen.ts\n' > /tmp/excluded-files.txt
 run 120000 || fail "excluded: exit"
 grep -q 'EXCLUDED FROM REVIEW — 2 files' /tmp/claude-prompt.md && grep -qF -- '- `$(whoami)/gen.ts`' /tmp/claude-prompt.md || fail "excluded: list missing"
-REVIEW_AUTHORITY=full FILE_COUNT=0 run 120000 || fail "all excluded: exit"
-grep -q 'Every changed file is excluded' /tmp/claude-prompt.md || fail "all excluded: approval allowed"
+REVIEW_AUTHORITY=full FILE_COUNT=0 run 120000 || fail "no files: exit"
+grep -q 'No changed files are left to review' /tmp/claude-prompt.md || fail "no files: approval allowed"
 REVIEW_AUTHORITY=full FILE_COUNT=3 run 120000 || fail "some excluded: exit"
 grep -q 'MUST NOT APPROVE' /tmp/claude-prompt.md && fail "some excluded: approval blocked"
 : > /tmp/excluded-files.txt
@@ -54,4 +54,13 @@ REVIEW_AUTHORITY=full CHANGED_LINES=50 APPROVE_MAX_CHANGED_LINES=100 run 120000 
 grep -q 'MUST NOT APPROVE' /tmp/claude-prompt.md && fail "approve lines: under the limit but approval blocked"
 REVIEW_AUTHORITY=full CHANGED_LINES=500 run 120000 || fail "approve lines unset: exit"
 grep -q 'MUST NOT APPROVE' /tmp/claude-prompt.md && fail "approve lines: blocked with no limit set"
+
+# approve-max-files is checked in shell like approve-max-changed-lines, not left to Claude
+for th in strict normal; do
+  REVIEW_AUTHORITY=full APPROVE_THRESHOLD=$th FILE_COUNT=60 APPROVE_MAX_FILES=50 run 120000 || fail "approve files ($th): exit"
+  grep -q 'This PR has 60 files (approval limit: 50)' /tmp/claude-prompt.md || fail "approve files ($th): over the limit but approval allowed"
+  grep -q 'AND the PR has' /tmp/claude-prompt.md && fail "approve files ($th): limit still in the instructions"
+done
+REVIEW_AUTHORITY=full FILE_COUNT=40 APPROVE_MAX_FILES=50 run 120000 || fail "approve files under: exit"
+grep -q 'MUST NOT APPROVE' /tmp/claude-prompt.md && fail "approve files: under the limit but approval blocked"
 echo PASS

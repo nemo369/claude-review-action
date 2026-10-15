@@ -10,10 +10,16 @@ set -euo pipefail
 # ponytail: quoted paths keep octal escapes; a rename whose new path holds " b/" mis-splits — parse `rename to` if it bites
 header_paths() {
   awk '/^diff --git /{
-    r = substr($0, 12); gsub(/"/, "", r); n = length(r); h = (n - 1) / 2
+    r = substr($0, 12); gsub(/\\"/, "\001", r); gsub(/"/, "", r); gsub(/\001/, "\\\"", r); n = length(r); h = (n - 1) / 2
     if (n % 2 && substr(r, 1, 2) == "a/" && substr(r, h + 2, 2) == "b/" && substr(r, 3, h - 2) == substr(r, h + 4)) print substr(r, h + 4)
     else { sub(/^a\/.* b\//, "", r); print r }
   }' "$1"
+}
+
+# Git C-quotes unusual paths (caf\303\251.ts, we\"ird.ts); decode to match the REST paths
+decode_path() {
+  local p=${1//\\\"/\"}
+  printf '%b' "$(sed 's/\\\([0-7][0-7][0-7]\)/\\0\1/g' <<< "$p")"
 }
 
 # exclude-paths: one bash pattern per line, `*` also matches `/`
@@ -31,16 +37,20 @@ is_excluded() {
 }
 
 # --- PR size guard ---
-# REST, paginated: `gh pr view --json files` stops at 100 files
-gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" --jq '.[] | "\(.additions + .deletions)\t\(.filename)"' > /tmp/pr-files.tsv
+# `--json files` stops at 100 files; changedFiles is the full count
+PR_SIZE=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json changedFiles,additions,deletions --jq '"\(.changedFiles) \(.additions + .deletions)"')
+read -r FILE_COUNT CHANGED_LINES <<< "$PR_SIZE"
 : > /tmp/excluded-files.txt
-FILE_COUNT=0
-CHANGED_LINES=0
-while IFS=$'\t' read -r lines path; do
-  if is_excluded "$path"; then echo "$path" >> /tmp/excluded-files.txt; continue; fi
-  FILE_COUNT=$((FILE_COUNT + 1))
-  CHANGED_LINES=$((CHANGED_LINES + lines))
-done < /tmp/pr-files.tsv
+if [ ${#EXCLUDE_PATTERNS[@]} -gt 0 ]; then
+  # Per-file counts, only to take excluded files off the totals
+  gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" --jq '.[] | "\(.additions + .deletions)\t\(.filename)"' > /tmp/pr-files.tsv
+  while IFS=$'\t' read -r lines path; do
+    is_excluded "$path" || continue
+    echo "$path" >> /tmp/excluded-files.txt
+    FILE_COUNT=$((FILE_COUNT - 1))
+    CHANGED_LINES=$((CHANGED_LINES - lines))
+  done < /tmp/pr-files.tsv
+fi
 EXCLUDED_COUNT=$(wc -l < /tmp/excluded-files.txt | tr -d ' ')
 EXCLUDED_NOTE=""
 [ "$EXCLUDED_COUNT" -gt 0 ] && EXCLUDED_NOTE=", not counting $EXCLUDED_COUNT excluded files"
@@ -77,15 +87,15 @@ fi
 
 # Drop excluded files before truncation so they don't use the diff budget
 if [ "$EXCLUDED_COUNT" -gt 0 ]; then
-  # Diff headers octal-escape non-ASCII bytes (caf\303\251.ts); decode to match the REST paths
-  header_paths /tmp/pr-diff.txt | while IFS= read -r f; do
-    is_excluded "$(printf '%b' "$(sed 's/\\\([0-7][0-7][0-7]\)/\\0\1/g' <<< "$f")")" && echo 0 || echo 1
-  done > /tmp/pr-diff-keep.txt
+  header_paths /tmp/pr-diff.txt | while IFS= read -r f; do is_excluded "$(decode_path "$f")" && echo 0 || echo 1; done > /tmp/pr-diff-keep.txt
   awk '/^diff --git /{ getline keep < "/tmp/pr-diff-keep.txt" } keep != "0"' /tmp/pr-diff.txt > /tmp/pr-diff-kept.txt
   mv /tmp/pr-diff-kept.txt /tmp/pr-diff.txt
 fi
 
 cp /tmp/pr-diff.txt /tmp/pr-diff-full.txt
+header_paths /tmp/pr-diff-full.txt > /tmp/pr-diff-paths.txt
+HEADER_COUNT=$(wc -l < /tmp/pr-diff-paths.txt | tr -d ' ')
+[ "$HEADER_COUNT" = "$FILE_COUNT" ] || echo "::warning::Diff has $HEADER_COUNT file headers but the PR lists $FILE_COUNT files"
 
 # Track whether truncation occurs
 TRUNCATED=false
@@ -116,10 +126,7 @@ echo "diff_truncated=$TRUNCATED" >> "$GITHUB_OUTPUT"
 # --- Detect files missing from truncated diff ---
 : > /tmp/truncated-files.txt
 if [ "$TRUNCATED" = "true" ]; then
-  header_paths /tmp/pr-diff-full.txt > /tmp/pr-diff-paths.txt
   sort -u /tmp/pr-diff-paths.txt > /tmp/all-pr-files.txt
-  HEADER_COUNT=$(wc -l < /tmp/pr-diff-paths.txt | tr -d ' ')
-  [ "$HEADER_COUNT" = "$FILE_COUNT" ] || echo "::warning::Diff has $HEADER_COUNT file headers but the PR lists $FILE_COUNT files"
   # Files fully in the truncated diff — the last header is the one cut mid-way, so it counts as missing
   header_paths /tmp/pr-diff.txt | sed '$d' | sort -u > /tmp/included-files.txt
   # Split the full diff per file so missing files are reviewed as diffs (paths never reach a shell)
